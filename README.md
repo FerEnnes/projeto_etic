@@ -1,6 +1,5 @@
 # Olá, me chamo Fernanda Ennes! Sou Designer e estudante de Sistemas para Internet.
 - 🔭 Interesse em Banco de Dados, IoT e IA.
-- 🌱 Vegan
 
   ## Estou aprendendo
   
