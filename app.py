@@ -21,7 +21,7 @@ def validate_numbers(budget, cpr):
 
 PROMPT_TEMPLATE = """Você é uma assistente de marketing didática.
 Tarefa: gerar 3 IDEIAS de post e 2 LEGENDAS curtas por IDEIA, para o tema abaixo.
-Políticas (guardrails): não prometa resultados garantidos; seja clara e específica; sem jargões; máx. 140 caracteres por legenda.
+Políticas (guardrails): não prometa resultados garantidos; seja clara e específica; sem jargões; máx. 1000 caracteres por legenda.
 
 Contexto:
 - Tema/Nicho: {topic}
@@ -67,7 +67,7 @@ def agente_marketing(topic, audience, offer, tone, budget, cpr,
     budget, cpr = validate_numbers(budget, cpr)
     prompt = build_prompt(topic, audience, offer, tone)
     if gen_config is None:
-        gen_config = {"temperature": 0.4, "top_p": 0.9, "max_output_tokens": 1024}
+        gen_config = {"temperature": 0.4, "top_p": 0.9, "max_output_tokens": 10000}
 
     model = genai.GenerativeModel(model_name=model_name, generation_config=gen_config)
     response = model.generate_content(prompt)
