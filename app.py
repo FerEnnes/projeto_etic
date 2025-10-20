@@ -185,7 +185,7 @@ if submitted:
         else:
             st.write(ideas_text)
 
-        st.markdown("### 📊 Estimativa (Python)")
+        st.markdown("### 📊 Estimativa")
         st.write(f"Resultados ≈ orçamento / CPR → {budget_v}/{cpr_v} = **{int(estimativa)} {resultado_nome}**")
         st.caption("Observação: estimativa é aproximação; não é garantia de performance.")
     except ValueError as e:
