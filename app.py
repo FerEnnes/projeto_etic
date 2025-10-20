@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-import os, re
+import os
 
 # ---------- Guardrails ----------
 def sanitize_text(s: str, max_len=300):
@@ -44,7 +44,6 @@ def build_prompt(topic, audience, offer, tone):
     )
 
 def safe_response_text(response):
-    # tenta usar .text; se não vier, tenta extrair manualmente
     try:
         txt = (response.text or "").strip()
         if txt:
@@ -76,11 +75,21 @@ def agente_marketing(topic, audience, offer, tone, budget, cpr,
     estimativa = budget / cpr
     return safe_response_text(response), budget, cpr, estimativa
 
-# ---------- App ----------
+# ---------- Estilo “bot de marketing” ----------
 st.set_page_config(page_title="Gemini MKT Express", page_icon="⚡", layout="centered")
 
-st.title("⚡ Gemini MKT Express — Ideias + CPR")
-st.caption("Gera 3 ideias + 2 legendas por ideia e estima resultados (orçamento ÷ CPR).")
+# CSS leve para dar “cara de produto”
+st.markdown("""
+<style>
+  .main { max-width: 900px; }
+  .stTextInput>div>div>input::placeholder { color: #8b8b8b; opacity: 1; }
+  .stTextInput>label, .stCaption, .st-emotion-cache-16idsys p { font-size: 0.95rem; }
+  .pill { display:inline-block; padding:4px 10px; border-radius:999px; background:#222; color:#ddd; margin-right:6px; }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("### ⚡ Gemini MKT Express — Ideias + CPR")
+st.caption("Gere **3 ideias** + **2 legendas por ideia** e estime resultados (orçamento ÷ CPR).")
 
 # API key via st.secrets (produção) ou os.environ (fallback local)
 API_KEY = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY") or os.getenv("GOOGLE_APIKEY_ETIC")
@@ -91,21 +100,43 @@ genai.configure(api_key=API_KEY)
 
 with st.form("form"):
     st.subheader("Configurações da campanha")
+
+    # Exemplo visível, campos vazios
+    with st.expander("Ver exemplo preenchido (apenas referência)"):
+        st.markdown("""
+**Tema/Nicho:** Almoço executivo (delivery para empresas)  
+**Público:** Trabalhadores em horário de almoço na região central  
+**Oferta/Ângulo:** Combo do dia + bebida por R$ 24,90 — entrega em 20 min  
+**Tom de voz:** direto, amigável, foco em praticidade  
+**Orçamento (R$):** 60 · **CPR (R$):** 3 · **Resultado:** cliques
+        """)
+
     col1, col2 = st.columns(2)
     with col1:
-        topic = st.text_input("Tema/Nicho", "Almoço executivo (delivery para empresas)")
-        audience = st.text_input("Público", "Trabalhadores em horário de almoço na região central")
-        offer = st.text_input("Oferta/Ângulo", "Combo do dia + bebida por R$ 24,90 — entrega em 20 min")
+        topic = st.text_input("Tema/Nicho", value="", placeholder="Ex.: Pizzaria artesanal / Moda fitness / Clínica odontológica")
+        audience = st.text_input("Público", value="", placeholder="Ex.: Jovens 18–30 na região central")
+        offer = st.text_input("Oferta/Ângulo", value="", placeholder="Ex.: Quarta em dobro / Frete grátis / 10% off no 1º pedido")
     with col2:
-        tone = st.text_input("Tom de voz", "direto, amigável, foco em praticidade")
-        budget = st.text_input("Orçamento (R$)", "60")
-        cpr = st.text_input("CPR — custo por resultado (R$)", "3")
-        resultado_nome = st.text_input("Resultado medido pelo CPR", "cliques")
+        tone = st.text_input("Tom de voz", value="", placeholder="Ex.: direto e jovem · amigável · premium")
+        budget = st.text_input("Orçamento (R$)", value="", placeholder="Ex.: 300")
+        cpr = st.text_input("CPR — custo por resultado (R$)", value="", placeholder="Ex.: 2.5")
+        resultado_nome = st.text_input("Resultado medido pelo CPR", value="", placeholder="Ex.: cliques, leads, vendas")
+
+    st.caption(
+        "Dicas: "
+        "<span class='pill'>Oferta clara</span>"
+        "<span class='pill'>CTA objetivo</span>"
+        "<span class='pill'>Sem promessas de performance</span>",
+        unsafe_allow_html=True
+    )
 
     submitted = st.form_submit_button("Gerar ideias e estimativa")
 
 if submitted:
     try:
+        # fallback de resultado_nome
+        resultado_nome = (resultado_nome or "resultados").strip()
+
         ideas_text, budget_v, cpr_v, estimativa = agente_marketing(
             topic, audience, offer, tone, budget, cpr,
             model_name="gemini-2.5-flash",
