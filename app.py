@@ -113,9 +113,9 @@ with st.form("form"):
 
     col1, col2 = st.columns(2)
     with col1:
-        topic = st.text_input("Tema/Nicho", value="", placeholder="Ex.: Pizzaria artesanal / Moda fitness / Clínica odontológica")
+        topic = st.text_input("Tema/Nicho", value="", placeholder="Ex.: Pizzaria artesanal ")
         audience = st.text_input("Público", value="", placeholder="Ex.: Jovens 18–30 na região central")
-        offer = st.text_input("Oferta/Ângulo", value="", placeholder="Ex.: Quarta em dobro / Frete grátis / 10% off no 1º pedido")
+        offer = st.text_input("Oferta/Ângulo", value="", placeholder="Ex.: Quarta em dobro / Frete grátis")
     with col2:
         tone = st.text_input("Tom de voz", value="", placeholder="Ex.: direto e jovem · amigável · premium")
         budget = st.text_input("Orçamento (R$)", value="", placeholder="Ex.: 300")
