@@ -19,9 +19,15 @@ def validate_numbers(budget, cpr):
         raise ValueError("Valores muito altos para a aula. Revise.")
     return budget, cpr
 
+# Prompt mais conciso e com limites um pouco mais altos (legendas e total)
 PROMPT_TEMPLATE = """Você é uma assistente de marketing didática.
-Tarefa: gerar 3 IDEIAS de post e 2 LEGENDAS curtas por IDEIA, para o tema abaixo.
-Políticas (guardrails): não prometa resultados garantidos; seja clara e específica; sem jargões; máx. 1000 caracteres por legenda.
+
+Tarefa: gerar 3 IDEIAS de post e 2 LEGENDAS curtas por IDEIA.
+Regras:
+- Não prometa resultados garantidos; seja clara e específica; sem jargões.
+- Cada IDEIA: título curto + ângulo (1 linha).
+- Cada LEGENDA: ≤ 160 caracteres e com CTA simples.
+- Saída TOTAL concisa (≈ 250–300 palavras).
 
 Contexto:
 - Tema/Nicho: {topic}
@@ -29,10 +35,21 @@ Contexto:
 - Oferta/Ângulo: {offer}
 - Tom de voz: {tone}
 
-Formato de saída (obrigatório):
-1) IDEIAS (3 itens numerados, cada ideia com título curto + ângulo)
-2) LEGENDAS (para cada ideia, 2 variações curtas com CTA)
-Não inclua nada além desses itens.
+Formato de saída (exato):
+1) IDEIAS
+1. ...
+2. ...
+3. ...
+2) LEGENDAS
+Para IDEIA 1:
+- ...
+- ...
+Para IDEIA 2:
+- ...
+- ...
+Para IDEIA 3:
+- ...
+- ...
 """
 
 def build_prompt(topic, audience, offer, tone):
@@ -44,6 +61,7 @@ def build_prompt(topic, audience, offer, tone):
     )
 
 def safe_response_text(response):
+    # tenta usar .text; se não vier, extrai manualmente
     try:
         txt = (response.text or "").strip()
         if txt:
@@ -61,19 +79,31 @@ def safe_response_text(response):
     except Exception:
         return "[Sem texto e sem candidates]"
 
+def _try_generate(model, prompt):
+    # 1ª tentativa
+    resp = model.generate_content(prompt)
+    txt = safe_response_text(resp)
+    # Se estourar tokens (finish_reason=2), tenta versão mais curta
+    if txt.startswith("[Sem texto na resposta; finish_reason=2]"):
+        short = prompt + "\n\nResponda de forma AINDA mais curta. Priorize listas em 1 linha."
+        resp = model.generate_content(short)
+        txt = safe_response_text(resp)
+    return txt
+
 def agente_marketing(topic, audience, offer, tone, budget, cpr,
                      model_name="gemini-2.5-flash",
                      gen_config=None):
     budget, cpr = validate_numbers(budget, cpr)
     prompt = build_prompt(topic, audience, offer, tone)
+
     if gen_config is None:
-        gen_config = {"temperature": 0.4, "top_p": 0.9, "max_output_tokens": 10000}
+        gen_config = {"temperature": 0.35, "top_p": 0.9, "max_output_tokens": 3072}  # um pouco mais longo
 
     model = genai.GenerativeModel(model_name=model_name, generation_config=gen_config)
-    response = model.generate_content(prompt)
+    ideas_text = _try_generate(model, prompt)
 
     estimativa = budget / cpr
-    return safe_response_text(response), budget, cpr, estimativa
+    return ideas_text, budget, cpr, estimativa
 
 # ---------- Estilo “bot de marketing” ----------
 st.set_page_config(page_title="Gemini MKT Express", page_icon="⚡", layout="centered")
@@ -113,7 +143,7 @@ with st.form("form"):
 
     col1, col2 = st.columns(2)
     with col1:
-        topic = st.text_input("Tema/Nicho", value="", placeholder="Ex.: Pizzaria artesanal ")
+        topic = st.text_input("Tema/Nicho", value="", placeholder="Ex.: Pizzaria artesanal / Moda fitness / Clínica")
         audience = st.text_input("Público", value="", placeholder="Ex.: Jovens 18–30 na região central")
         offer = st.text_input("Oferta/Ângulo", value="", placeholder="Ex.: Quarta em dobro / Frete grátis")
     with col2:
@@ -132,19 +162,28 @@ with st.form("form"):
 
     submitted = st.form_submit_button("Gerar ideias e estimativa")
 
+# Validação de campos obrigatórios
+if submitted:
+    campos = [topic, audience, offer, tone, budget, cpr]
+    if not all((c or "").strip() for c in campos):
+        st.warning("Preencha todos os campos antes de gerar.")
+        st.stop()
+
 if submitted:
     try:
-        # fallback de resultado_nome
         resultado_nome = (resultado_nome or "resultados").strip()
 
         ideas_text, budget_v, cpr_v, estimativa = agente_marketing(
             topic, audience, offer, tone, budget, cpr,
             model_name="gemini-2.5-flash",
-            gen_config={"temperature": 0.4, "top_p": 0.9, "max_output_tokens": 1024}
+            gen_config={"temperature": 0.35, "top_p": 0.9, "max_output_tokens": 3072}
         )
 
         st.markdown("### ✅ Ideias & Legendas")
-        st.write(ideas_text)
+        if ideas_text.startswith("[Sem texto"):
+            st.warning("Resposta ficou longa demais. Tente um **tom mais objetivo** e **legendas menores**.")
+        else:
+            st.write(ideas_text)
 
         st.markdown("### 📊 Estimativa (Python)")
         st.write(f"Resultados ≈ orçamento / CPR → {budget_v}/{cpr_v} = **{int(estimativa)} {resultado_nome}**")
