@@ -1,4 +1,4 @@
-# ⚡ Gemini MKT Express — Mini‑Agente de Marketing
+#  Gemini MKT Express — Mini‑Agente de Marketing
 
 Gera **3 ideias** de post e **2 legendas/ideia** a partir de Tema/Público/Oferta/Tom e calcula **estimativa ≈ orçamento ÷ CPR**. Feito para aula/workshop: simples, seguro e fácil de adaptar.
 
